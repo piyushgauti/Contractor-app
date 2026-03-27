@@ -1,24 +1,40 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import ContractorCard from "../components/ContractorCard"
-import contractors from "../data/contractors"
-
-const topRated = contractors
-  .filter(c => c.rating >= 4.8)
-  .sort((a, b) => b.rating - a.rating)
-  .slice(0, 3)
+import { fetchContractors } from "../firebase/firestoreFunctions"
+import localContractors from "../data/contractors"
 
 function Home({ onSelectContractor, onJoinAsContractor }) {
   const [search, setSearch] = useState("")
-  const [showAll, setShowAll] = useState(false)
+  const [contractors, setContractors] = useState(localContractors)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadContractors = async () => {
+      const data = await fetchContractors()
+      // merge Firebase contractors with local ones for now
+      if (data.length > 0) {
+        setContractors([...localContractors, ...data])
+      }
+      setLoading(false)
+    }
+    loadContractors()
+  }, [])
+
+  const topRated = contractors
+    .filter(c => c.rating >= 4.8)
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 3)
 
   const filtered = contractors.filter(c => {
     return (
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.specialty.toLowerCase().includes(search.toLowerCase()) ||
       c.location.toLowerCase().includes(search.toLowerCase()) ||
-      c.state.toLowerCase().includes(search.toLowerCase())
+      c.state?.toLowerCase().includes(search.toLowerCase())
     )
   })
+
+  const [showAll, setShowAll] = useState(false)
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
@@ -31,8 +47,6 @@ function Home({ onSelectContractor, onJoinAsContractor }) {
         <p className="text-blue-100 text-sm mb-5">
           Construction & Civil · Verified profiles · Real work history
         </p>
-
-        {/* Search bar inside hero */}
         <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5">
           <span className="text-gray-400 text-sm">🔍</span>
           <input
@@ -43,12 +57,7 @@ function Home({ onSelectContractor, onJoinAsContractor }) {
             className="bg-transparent text-sm outline-none flex-1 text-gray-700"
           />
           {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="text-gray-400 hover:text-gray-600 text-sm"
-            >
-              ✕
-            </button>
+            <button onClick={() => setSearch("")} className="text-gray-400 text-sm">✕</button>
           )}
         </div>
       </div>
@@ -62,7 +71,7 @@ function Home({ onSelectContractor, onJoinAsContractor }) {
           </div>
           <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {[...new Set(contractors.map(c => c.state))].length}
+              {[...new Set(contractors.map(c => c.state).filter(Boolean))].length}
             </div>
             <div className="text-xs text-gray-500 mt-1">States covered</div>
           </div>
@@ -81,47 +90,50 @@ function Home({ onSelectContractor, onJoinAsContractor }) {
           <p className="text-xs text-gray-400 mb-3">
             {filtered.length} contractor{filtered.length !== 1 ? "s" : ""} found
           </p>
-          <div className="flex flex-col gap-3">
-            {filtered.map(contractor => (
-              <ContractorCard
-                key={contractor.id}
-                contractor={contractor}
-                onClick={() => onSelectContractor(contractor)}
-              />
-            ))}
-            {filtered.length === 0 && (
-              <div className="text-center text-gray-400 py-12 text-sm">
-                No contractors found. Try a different search.
-              </div>
-            )}
-          </div>
+          {loading ? (
+            <p className="text-center text-gray-400 text-sm py-8">Loading...</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {filtered.map(contractor => (
+                <ContractorCard
+                  key={contractor.id}
+                  contractor={contractor}
+                  onClick={() => onSelectContractor(contractor)}
+                />
+              ))}
+              {filtered.length === 0 && (
+                <div className="text-center text-gray-400 py-12 text-sm">
+                  No contractors found.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Default view — no search */}
+      {/* Default view */}
       {!search && (
         <div>
-
-          {/* Featured contractors */}
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-gray-900">⭐ Top rated</h2>
-            <button
-              onClick={() => setShowAll(!showAll)}
-              className="text-xs text-blue-600"
-            >
+            <button onClick={() => setShowAll(!showAll)} className="text-xs text-blue-600">
               {showAll ? "Show less" : "View all"}
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 mb-6">
-            {(showAll ? contractors : topRated).map(contractor => (
-              <ContractorCard
-                key={contractor.id}
-                contractor={contractor}
-                onClick={() => onSelectContractor(contractor)}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <p className="text-center text-gray-400 text-sm py-8">Loading contractors...</p>
+          ) : (
+            <div className="flex flex-col gap-3 mb-6">
+              {(showAll ? contractors : topRated).map(contractor => (
+                <ContractorCard
+                  key={contractor.id}
+                  contractor={contractor}
+                  onClick={() => onSelectContractor(contractor)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Join as contractor banner */}
           <div className="bg-gray-900 rounded-2xl px-6 py-6 text-white flex items-center justify-between gap-4">

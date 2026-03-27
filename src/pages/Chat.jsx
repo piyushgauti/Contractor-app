@@ -1,94 +1,68 @@
-import { useState } from "react"
-
-function Chat({ contractor, onBack }) {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: `Hi! I'm interested in your work. Are you available for a project?`,
-      sender: "user",
-      time: "10:00 AM"
-    },
-    {
-      id: 2,
-      text: `Hello! Yes I'm available. What kind of project do you have in mind?`,
-      sender: "contractor",
-      time: "10:01 AM"
-    },
-    {
-      id: 3,
-      text: `I want to build a 2BHK house. Can we discuss the details?`,
-      sender: "user",
-      time: "10:02 AM"
-    },
-    {
-      id: 4,
-      text: `Sure! Please share the plot size and your budget. I'll give you an estimate.`,
-      sender: "contractor",
-      time: "10:03 AM"
-    },
-  ])
-
-  const [newMessage, setNewMessage] = useState("")
+import { useState, useEffect, useRef, useMemo } from "react";
+import { sendMessage, listenToMessages } from "../firebase/firestoreFunctions";
+// generate guest ID once when file loads — outside component
+if (!sessionStorage.getItem("guestId")) {
+  sessionStorage.setItem("guestId", "guest_" + Date.now().toString(36))
+}
+function Chat({ contractor, currentUser, onBack }) {
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const bottomRef = useRef(null);
 
   const initials = contractor.name
     .split(" ")
-    .map(n => n[0])
-    .join("")
+    .map((n) => n[0])
+    .join("");
 
-  const handleSend = () => {
-    // don't send empty messages
-    if (!newMessage.trim()) return
+  // compute these once and keep them stable
+  const senderId = useMemo(() => {
+    if (currentUser?.uid) return currentUser.uid;
+    return sessionStorage.getItem("guestId") || "guest_user";
+  }, [currentUser]);
+  const contractorId = useMemo(
+    () => contractor.uid || contractor.id?.toString(),
+    [contractor],
+  );
 
-    // add user message
-    const userMsg = {
-      id: messages.length + 1,
-      text: newMessage.trim(),
-      sender: "user",
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    }
+  useEffect(() => {
+    const unsubscribe = listenToMessages(senderId, contractorId, (msgs) => {
+      setMessages(msgs);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [senderId, contractorId]);
 
-    setMessages(prev => [...prev, userMsg])
-    setNewMessage("")
+  // auto scroll to bottom when new message arrives
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-    // simulate contractor reply after 1 second
-    setTimeout(() => {
-      const replies = [
-        "Sure, I can help with that!",
-        "That sounds good. Let me check my schedule.",
-        "Can you share more details about the project?",
-        "I have experience with similar projects.",
-        "Let's schedule a site visit this week.",
-      ]
-      const randomReply = replies[Math.floor(Math.random() * replies.length)]
-
-      const contractorMsg = {
-        id: messages.length + 2,
-        text: randomReply,
-        sender: "contractor",
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      }
-
-      setMessages(prev => [...prev, contractorMsg])
-    }, 1000)
-  }
+  const handleSend = async () => {
+    if (!newMessage.trim()) return;
+    const text = newMessage.trim();
+    setNewMessage("");
+    await sendMessage(senderId, contractorId, text);
+  };
 
   const handleKeyDown = (e) => {
-    // send message when Enter is pressed
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+      e.preventDefault();
+      handleSend();
     }
-  }
+  };
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) return "";
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
 
   return (
     <div className="max-w-xl mx-auto flex flex-col h-[calc(100vh-57px)]">
-
       {/* Chat header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200">
-        <button
-          onClick={onBack}
-          className="text-blue-600 text-sm mr-1"
-        >
+        <button onClick={onBack} className="text-blue-600 text-sm mr-1">
           ←
         </button>
 
@@ -98,44 +72,73 @@ function Chat({ contractor, onBack }) {
 
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-900">{contractor.name}</p>
-          <p className="text-xs text-gray-400">{contractor.specialty} · {contractor.location}</p>
+          <p className="text-xs text-gray-400">
+            {contractor.specialty} · {contractor.location}
+          </p>
         </div>
 
-        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-          contractor.available
-            ? "bg-green-100 text-green-700"
-            : "bg-orange-100 text-orange-700"
-        }`}>
+        <span
+          className={`text-xs px-2 py-1 rounded-full font-medium ${
+            contractor.available
+              ? "bg-green-100 text-green-700"
+              : "bg-orange-100 text-orange-700"
+          }`}
+        >
           {contractor.available ? "Online" : "Busy"}
         </span>
       </div>
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-        {messages.map(msg => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
-          >
-            {/* Contractor avatar for incoming messages */}
-            {msg.sender === "contractor" && (
-              <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs mr-2 flex-shrink-0 self-end">
-                {initials}
-              </div>
-            )}
+        {loading && (
+          <p className="text-center text-gray-400 text-sm py-8">
+            Loading messages...
+          </p>
+        )}
 
-            <div className={`max-w-[75%] ${msg.sender === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
-              <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                msg.sender === "user"
-                  ? "bg-blue-600 text-white rounded-br-sm"
-                  : "bg-white border border-gray-200 text-gray-800 rounded-bl-sm"
-              }`}>
-                {msg.text}
-              </div>
-              <span className="text-xs text-gray-400 px-1">{msg.time}</span>
-            </div>
+        {!loading && messages.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-400 text-sm">No messages yet</p>
+            <p className="text-gray-300 text-xs mt-1">
+              Send a message to start the conversation
+            </p>
           </div>
-        ))}
+        )}
+
+        {messages.map((msg) => {
+          const isMe = msg.senderId === senderId;
+          return (
+            <div
+              key={msg.id}
+              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+            >
+              {!isMe && (
+                <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs mr-2 flex-shrink-0 self-end">
+                  {initials}
+                </div>
+              )}
+
+              <div
+                className={`max-w-[75%] flex flex-col gap-1 ${isMe ? "items-end" : "items-start"}`}
+              >
+                <div
+                  className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                    isMe
+                      ? "bg-blue-600 text-white rounded-br-sm"
+                      : "bg-white border border-gray-200 text-gray-800 rounded-bl-sm"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+                <span className="text-xs text-gray-400 px-1">
+                  {formatTime(msg.createdAt)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+
+        <div ref={bottomRef} />
       </div>
 
       {/* Input area */}
@@ -144,7 +147,7 @@ function Chat({ contractor, onBack }) {
           type="text"
           placeholder="Type a message..."
           value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
+          onChange={(e) => setNewMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           className="flex-1 bg-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-400"
         />
@@ -160,9 +163,8 @@ function Chat({ contractor, onBack }) {
           ➤
         </button>
       </div>
-
     </div>
-  )
+  );
 }
 
-export default Chat
+export default Chat;
