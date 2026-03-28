@@ -4,7 +4,7 @@ import {
   signOut,
   onAuthStateChanged
 } from "firebase/auth"
-import { doc, setDoc } from "firebase/firestore"
+import { doc, setDoc,getDoc } from "firebase/firestore"
 import { auth, db } from "./config"
 
 // Register a new contractor
@@ -61,6 +61,39 @@ export const logoutContractor = async () => {
   try {
     await signOut(auth)
     return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+// Register a customer
+export const registerCustomer = async (name, email, password) => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
+
+    await setDoc(doc(db, "customers", user.uid), {
+      uid: user.uid,
+      name,
+      email,
+      createdAt: new Date().toISOString()
+    })
+
+    return { success: true, uid: user.uid, name }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Login a customer
+export const loginCustomer = async (email, password) => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
+
+    const docSnap = await getDoc(doc(db, "customers", user.uid))
+    const name = docSnap.exists() ? docSnap.data().name : "Customer"
+
+    return { success: true, uid: user.uid, name }
   } catch (error) {
     return { success: false, error: error.message }
   }

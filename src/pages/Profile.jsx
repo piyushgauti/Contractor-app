@@ -1,40 +1,86 @@
-import { useState } from "react"
+import { useState, useEffect } from "react";
+import ReviewForm from "../components/ReviewForm";
+import { fetchContractorById } from "../firebase/firestoreFunctions";
 
-function Profile({ contractor, onBack, onMessage }) {
-  const [activeTab, setActiveTab] = useState("overview")
+function Profile({ contractor, onBack, onMessage,currentUser }) {
+  const [activeTab, setActiveTab] = useState("overview");
 
   const gradeColor = {
     "A+": "bg-green-100 text-green-800",
     A: "bg-yellow-100 text-yellow-800",
     B: "bg-blue-100 text-blue-800",
-  }
+  };
 
   const initials = contractor.name
     .split(" ")
     .map((n) => n[0])
-    .join("")
+    .join("");
 
   const photoSets = [
     [
-      { bg: "bg-amber-50", icon: "🏗️", stage: "Foundation", label: "text-amber-700" },
-      { bg: "bg-blue-50", icon: "🧱", stage: "Structure", label: "text-blue-700" },
-      { bg: "bg-green-50", icon: "🪟", stage: "Finishing", label: "text-green-700" },
+      {
+        bg: "bg-amber-50",
+        icon: "🏗️",
+        stage: "Foundation",
+        label: "text-amber-700",
+      },
+      {
+        bg: "bg-blue-50",
+        icon: "🧱",
+        stage: "Structure",
+        label: "text-blue-700",
+      },
+      {
+        bg: "bg-green-50",
+        icon: "🪟",
+        stage: "Finishing",
+        label: "text-green-700",
+      },
     ],
     [
-      { bg: "bg-orange-50", icon: "⛏️", stage: "Site prep", label: "text-orange-700" },
-      { bg: "bg-purple-50", icon: "🔩", stage: "Steel work", label: "text-purple-700" },
-      { bg: "bg-teal-50", icon: "✅", stage: "Complete", label: "text-teal-700" },
+      {
+        bg: "bg-orange-50",
+        icon: "⛏️",
+        stage: "Site prep",
+        label: "text-orange-700",
+      },
+      {
+        bg: "bg-purple-50",
+        icon: "🔩",
+        stage: "Steel work",
+        label: "text-purple-700",
+      },
+      {
+        bg: "bg-teal-50",
+        icon: "✅",
+        stage: "Complete",
+        label: "text-teal-700",
+      },
     ],
     [
-      { bg: "bg-rose-50", icon: "📐", stage: "Planning", label: "text-rose-700" },
-      { bg: "bg-indigo-50", icon: "🏠", stage: "Framing", label: "text-indigo-700" },
-      { bg: "bg-lime-50", icon: "🎨", stage: "Plastering", label: "text-lime-700" },
+      {
+        bg: "bg-rose-50",
+        icon: "📐",
+        stage: "Planning",
+        label: "text-rose-700",
+      },
+      {
+        bg: "bg-indigo-50",
+        icon: "🏠",
+        stage: "Framing",
+        label: "text-indigo-700",
+      },
+      {
+        bg: "bg-lime-50",
+        icon: "🎨",
+        stage: "Plastering",
+        label: "text-lime-700",
+      },
     ],
-  ]
+  ];
 
   return (
     <div className="max-w-xl mx-auto">
-
       {/* Header */}
       <div className="px-4 pt-6 pb-4">
         <button
@@ -50,8 +96,12 @@ function Profile({ contractor, onBack, onMessage }) {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-gray-900">{contractor.name}</h1>
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${gradeColor[contractor.grade]}`}>
+              <h1 className="text-xl font-bold text-gray-900">
+                {contractor.name}
+              </h1>
+              <span
+                className={`text-xs px-2 py-1 rounded-full font-medium ${gradeColor[contractor.grade]}`}
+              >
                 Grade {contractor.grade}
               </span>
             </div>
@@ -62,7 +112,9 @@ function Profile({ contractor, onBack, onMessage }) {
               <span className="text-yellow-400 text-sm">
                 {"★".repeat(Math.floor(contractor.rating))}
               </span>
-              <span className="text-xs text-gray-500">{contractor.rating} rating</span>
+              <span className="text-xs text-gray-500">
+                {contractor.rating} rating
+              </span>
             </div>
           </div>
         </div>
@@ -71,33 +123,43 @@ function Profile({ contractor, onBack, onMessage }) {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 px-4 mb-4">
         <div className="bg-gray-50 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-gray-900">{contractor.projects}</div>
+          <div className="text-xl font-bold text-gray-900">
+            {contractor.projects}
+          </div>
           <div className="text-xs text-gray-500 mt-1">Projects</div>
         </div>
         <div className="bg-gray-50 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-gray-900">{contractor.experience}</div>
+          <div className="text-xl font-bold text-gray-900">
+            {contractor.experience}
+          </div>
           <div className="text-xs text-gray-500 mt-1">Yrs exp</div>
         </div>
         <div className="bg-gray-50 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-gray-900">{contractor.rating}</div>
+          <div className="text-xl font-bold text-gray-900">
+            {contractor.rating}
+          </div>
           <div className="text-xs text-gray-500 mt-1">Rating</div>
         </div>
       </div>
 
       {/* Availability badge */}
       <div className="px-4 mb-4">
-        <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${
-          contractor.available
-            ? "bg-green-100 text-green-700"
-            : "bg-orange-100 text-orange-700"
-        }`}>
-          {contractor.available ? "✓ Available for new projects" : "⏳ Currently busy"}
+        <span
+          className={`text-xs px-3 py-1.5 rounded-full font-medium ${
+            contractor.available
+              ? "bg-green-100 text-green-700"
+              : "bg-orange-100 text-orange-700"
+          }`}
+        >
+          {contractor.available
+            ? "✓ Available for new projects"
+            : "⏳ Currently busy"}
         </span>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 px-4 mb-4">
-        {["overview", "work history"].map((tab) => (
+        {["overview", "work history", "reviews"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -114,7 +176,6 @@ function Profile({ contractor, onBack, onMessage }) {
 
       {/* Tab content */}
       <div className="px-4">
-
         {/* Overview tab */}
         {activeTab === "overview" && (
           <div>
@@ -123,7 +184,9 @@ function Profile({ contractor, onBack, onMessage }) {
               {contractor.about}
             </p>
 
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Specialties</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Specialties
+            </h3>
             <div className="flex flex-wrap gap-2 mb-6">
               {contractor.specialties.map((s) => (
                 <span
@@ -158,7 +221,9 @@ function Profile({ contractor, onBack, onMessage }) {
                       className={`${photo.bg} flex flex-col items-center justify-center h-24 text-2xl`}
                     >
                       <span>{photo.icon}</span>
-                      <span className={`text-xs font-medium mt-1 ${photo.label}`}>
+                      <span
+                        className={`text-xs font-medium mt-1 ${photo.label}`}
+                      >
                         {photo.stage}
                       </span>
                     </div>
@@ -166,27 +231,86 @@ function Profile({ contractor, onBack, onMessage }) {
                   {/* Upload placeholder tile */}
                   <div className="bg-gray-50 flex flex-col items-center justify-center h-24 border border-dashed border-gray-300">
                     <span className="text-gray-300 text-2xl">📷</span>
-                    <span className="text-xs text-gray-300 mt-1">Add photo</span>
+                    <span className="text-xs text-gray-300 mt-1">
+                      Add photo
+                    </span>
                   </div>
                 </div>
 
                 {/* Work details */}
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-sm font-medium text-gray-900">{work.title}</h3>
+                    <h3 className="text-sm font-medium text-gray-900">
+                      {work.title}
+                    </h3>
                     <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0">
                       {work.value}
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">{work.date}</p>
-                  <p className="text-sm text-gray-500 mt-2 italic">"{work.review}"</p>
+                  <p className="text-sm text-gray-500 mt-2 italic">
+                    "{work.review}"
+                  </p>
                 </div>
-
               </div>
             ))}
           </div>
         )}
+        {/* Reviews tab */}
+        {activeTab === "reviews" && (
+          <div className="flex flex-col gap-4 pb-6">
+            <ReviewForm
+              contractorId={contractor.uid || contractor.id}
+              currentUser={currentUser}
+              onReviewAdded={() => {}}
+            />
 
+            {/* Existing reviews */}
+            {contractor.reviews && contractor.reviews.length > 0 ? (
+              contractor.reviews.map((review, index) => (
+                <div
+                  key={index}
+                  className="bg-white border border-gray-200 rounded-xl p-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-medium">
+                        {review.reviewerName?.[0] || "A"}
+                      </div>
+                      <span className="text-sm font-medium text-gray-800">
+                        {review.reviewerName || "Anonymous"}
+                      </span>
+                    </div>
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          className={`text-sm ${star <= review.rating ? "text-yellow-400" : "text-gray-200"}`}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {review.comment}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {new Date(review.createdAt).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-400 text-sm">
+                No reviews yet. Be the first to review!
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {/* ↑ tab content div closes here */}
 
@@ -199,10 +323,9 @@ function Profile({ contractor, onBack, onMessage }) {
           Message {contractor.name.split(" ")[0]}
         </button>
       </div>
-
     </div>
     // ↑ outer max-w-xl div closes here
-  )
+  );
 }
 
-export default Profile
+export default Profile;

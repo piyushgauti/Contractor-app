@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { sendMessage, listenToMessages } from "../firebase/firestoreFunctions";
 // generate guest ID once when file loads — outside component
 if (!sessionStorage.getItem("guestId")) {
-  sessionStorage.setItem("guestId", "guest_" + Date.now().toString(36))
+  sessionStorage.setItem("guestId", "guest_" + Date.now().toString(36));
 }
-function Chat({ contractor, currentUser, onBack }) {
+function Chat({ contractor, currentUser, onBack, onMarkRead }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,6 +29,7 @@ function Chat({ contractor, currentUser, onBack }) {
     const unsubscribe = listenToMessages(senderId, contractorId, (msgs) => {
       setMessages(msgs);
       setLoading(false);
+      if (onMarkRead) onMarkRead();
     });
     return () => unsubscribe();
   }, [senderId, contractorId]);
@@ -42,7 +43,12 @@ function Chat({ contractor, currentUser, onBack }) {
     if (!newMessage.trim()) return;
     const text = newMessage.trim();
     setNewMessage("");
-    await sendMessage(senderId, contractorId, text);
+    const senderName =
+      currentUser?.name && !currentUser.name.includes("@")
+        ? currentUser.name
+        : currentUser?.email?.split("@")[0] || "Guest";
+    const receiverName = contractor?.name || "Contractor";
+    await sendMessage(senderId, contractorId, text, senderName, receiverName);
   };
 
   const handleKeyDown = (e) => {
