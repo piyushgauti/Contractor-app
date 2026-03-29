@@ -9,7 +9,11 @@ import Dashboard from "./pages/Dashboard";
 import CustomerAuth from "./pages/CustomerAuth";
 import ContractorInbox from "./pages/ContractorInbox";
 import CustomerInbox from "./pages/CustomerInbox";
+import PostProject from "./pages/PostProject";
+import MyProjects from "./pages/MyProjects";
+import ProjectsFeed from "./pages/ProjectsFeed";
 import { listenToAuthState } from "./firebase/authFunctions";
+import Admin from "./pages/Admin";
 import {
   fetchContractorById,
   listenToUnreadCount,
@@ -27,7 +31,6 @@ function App() {
 
   useEffect(() => {
     let unreadUnsub = null;
-
     const unsubscribe = listenToAuthState(async (user) => {
       if (user) {
         const contractorData = await fetchContractorById(user.uid);
@@ -39,19 +42,20 @@ function App() {
           });
           setUserType("contractor");
         } else {
-          // fetch customer name from Firestore
-          const { getDoc, doc } = await import("firebase/firestore");
-          const { db } = await import("./firebase/config");
-          const customerSnap = await getDoc(doc(db, "customers", user.uid));
-          const customerName = customerSnap.exists()
-            ? customerSnap.data().name
-            : user.email;
-          setCurrentUser({ ...user, name: customerName, type: "customer" });
+          try {
+            const { getDoc, doc } = await import("firebase/firestore");
+            const { db } = await import("./firebase/config");
+            const customerSnap = await getDoc(doc(db, "customers", user.uid));
+            const customerName = customerSnap.exists()
+              ? customerSnap.data().name
+              : user.email;
+            setCurrentUser({ ...user, name: customerName, type: "customer" });
+          } catch {
+            setCurrentUser({ ...user, name: user.email, type: "customer" });
+          }
           setUserType("customer");
         }
-        unreadUnsub = listenToUnreadCount(user.uid, (count) => {
-          setUnreadCount(count);
-        });
+        unreadUnsub = listenToUnreadCount(user.uid, setUnreadCount);
       } else {
         setCurrentUser(null);
         setUserType(null);
@@ -60,7 +64,6 @@ function App() {
       }
       setAuthLoading(false);
     });
-
     return () => {
       unsubscribe();
       if (unreadUnsub) unreadUnsub();
@@ -79,14 +82,12 @@ function App() {
 
   const handleOpenChat = (otherId, otherName) => {
     setSelectedContractor((prev) => {
-      // if we already have full contractor data keep it
       if (
         prev &&
         (prev.uid === otherId || prev.id === otherId) &&
         prev.specialty
-      ) {
+      )
         return prev;
-      }
       return {
         uid: otherId,
         id: otherId,
@@ -113,6 +114,7 @@ function App() {
         currentUser={currentUser}
         userType={userType}
         unreadCount={unreadCount}
+        onHome={() => setCurrentPage("home")}
         onLoginClick={() => navigateTo("customerAuth")}
         onContractorLogin={() => navigateTo("login")}
         onDashboard={() => navigateTo("dashboard")}
@@ -121,6 +123,9 @@ function App() {
             userType === "contractor" ? "contractorInbox" : "customerInbox",
           )
         }
+        onProjectsClick={() => navigateTo(userType === "contractor" ? "projectsFeed" : "myProjects")}
+        onAdminClick={() => navigateTo("admin")}
+        
         onLogout={() => {
           setCurrentUser(null);
           setUserType(null);
@@ -135,7 +140,6 @@ function App() {
           onJoinAsContractor={() => navigateTo("signup")}
         />
       )}
-
       {currentPage === "profile" && (
         <Profile
           contractor={selectedContractor}
@@ -157,13 +161,17 @@ function App() {
                   ? "contractorInbox"
                   : previousPage === "customerInbox"
                     ? "customerInbox"
-                    : "profile",
+                    : previousPage === "projectsFeed"
+                      ? "projectsFeed"
+                      : "profile",
             )
           }
           onMarkRead={() => {
             if (currentUser && selectedContractor) {
-              const otherId = selectedContractor.uid || selectedContractor.id;
-              markMessagesAsRead(otherId, currentUser.uid);
+              markMessagesAsRead(
+                selectedContractor.uid || selectedContractor.id,
+                currentUser.uid,
+              );
             }
           }}
         />
@@ -175,14 +183,12 @@ function App() {
           onSuccess={() => setCurrentPage("home")}
         />
       )}
-
       {currentPage === "login" && (
         <Login
           onBack={() => setCurrentPage("home")}
           onSuccess={() => setCurrentPage("home")}
         />
       )}
-
       {currentPage === "customerAuth" && (
         <CustomerAuth
           onBack={() => setCurrentPage("home")}
@@ -193,8 +199,6 @@ function App() {
           }}
         />
       )}
-
-
       {currentPage === "dashboard" && (
         <Dashboard
           currentUser={currentUser}
@@ -202,7 +206,6 @@ function App() {
           onOpenChat={handleOpenChat}
         />
       )}
-
       {currentPage === "contractorInbox" && (
         <ContractorInbox
           currentUser={currentUser}
@@ -210,11 +213,37 @@ function App() {
           onBack={() => setCurrentPage("home")}
         />
       )}
-
       {currentPage === "customerInbox" && (
         <CustomerInbox
           currentUser={currentUser}
           onOpenChat={handleOpenChat}
+          onBack={() => setCurrentPage("home")}
+        />
+      )}
+      {currentPage === "postProject" && (
+        <PostProject
+          currentUser={currentUser}
+          onBack={() => setCurrentPage("myProjects")}
+          onSuccess={() => setCurrentPage("myProjects")}
+        />
+      )}
+      {currentPage === "myProjects" && (
+        <MyProjects
+          currentUser={currentUser}
+          onBack={() => setCurrentPage("home")}
+          onPostProject={() => navigateTo("postProject")}
+        />
+      )}
+      {currentPage === "projectsFeed" && (
+        <ProjectsFeed
+          currentUser={currentUser}
+          onBack={() => setCurrentPage("home")}
+          onMessageClient={handleOpenChat}
+        />
+      )}
+      {currentPage === "admin" && (
+        <Admin
+          currentUser={currentUser}
           onBack={() => setCurrentPage("home")}
         />
       )}

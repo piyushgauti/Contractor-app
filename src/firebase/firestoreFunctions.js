@@ -241,3 +241,70 @@ export const listenToCustomerChats = (customerId, callback) => {
     callback(Object.values(chatMap));
   });
 };
+
+// Fetch all contractors for admin
+export const fetchAllContractors = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "contractors"))
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch (error) {
+    return []
+  }
+}
+
+// Fetch all customers for admin
+export const fetchAllCustomers = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "customers"))
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch (error) {
+    return []
+  }
+}
+
+// Fetch all projects for admin
+export const fetchAllProjects = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "projects"))
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch (error) {
+    return []
+  }
+}
+
+// Verify a contractor
+export const verifyContractor = async (uid, grade) => {
+  try {
+    await updateDoc(doc(db, "contractors", uid), {
+      verified: true,
+      grade: grade
+    })
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Unverify a contractor
+export const unverifyContractor = async (uid) => {
+  try {
+    await updateDoc(doc(db, "contractors", uid), {
+      verified: false,
+      grade: "Unverified"
+    })
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Delete a contractor
+export const deleteContractor = async (uid) => {
+  try {
+    const { deleteDoc } = await import("firebase/firestore")
+    await deleteDoc(doc(db, "contractors", uid))
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}

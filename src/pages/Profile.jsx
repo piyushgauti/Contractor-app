@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import ReviewForm from "../components/ReviewForm";
 import { fetchContractorById } from "../firebase/firestoreFunctions";
 
-function Profile({ contractor, onBack, onMessage,currentUser }) {
+function Profile({ contractor, onBack, onMessage, currentUser }) {
   const [activeTab, setActiveTab] = useState("overview");
 
   const gradeColor = {
@@ -96,8 +96,16 @@ function Profile({ contractor, onBack, onMessage,currentUser }) {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-1.5">
                 {contractor.name}
+                {contractor.verified && (
+                  <span
+                    className="text-blue-500 text-base"
+                    title="Verified by ContractorFind"
+                  >
+                    ✓
+                  </span>
+                )}
               </h1>
               <span
                 className={`text-xs px-2 py-1 rounded-full font-medium ${gradeColor[contractor.grade]}`}
@@ -121,7 +129,7 @@ function Profile({ contractor, onBack, onMessage,currentUser }) {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-3 px-4 mb-4">
+      <div className="grid grid-cols-4 gap-2 px-4 mb-4">
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <div className="text-xl font-bold text-gray-900">
             {contractor.projects}
@@ -139,6 +147,14 @@ function Profile({ contractor, onBack, onMessage,currentUser }) {
             {contractor.rating}
           </div>
           <div className="text-xs text-gray-500 mt-1">Rating</div>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3 text-center">
+          <div className="text-lg font-bold text-blue-700">
+            {contractor.rate
+              ? `₹${Number(contractor.rate).toLocaleString("en-IN")}`
+              : "—"}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Per day</div>
         </div>
       </div>
 

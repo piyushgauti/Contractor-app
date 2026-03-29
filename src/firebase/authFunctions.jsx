@@ -2,10 +2,10 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
-} from "firebase/auth"
-import { doc, setDoc,getDoc } from "firebase/firestore"
-import { auth, db } from "./config"
+  onAuthStateChanged,
+} from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { auth, db } from "./config";
 
 // Register a new contractor
 export const registerContractor = async (formData) => {
@@ -14,10 +14,10 @@ export const registerContractor = async (formData) => {
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       formData.email,
-      formData.password
-    )
+      formData.password,
+    );
 
-    const user = userCredential.user
+    const user = userCredential.user;
 
     // save contractor profile in Firestore
     await setDoc(doc(db, "contractors", user.uid), {
@@ -32,74 +32,89 @@ export const registerContractor = async (formData) => {
       specialties: formData.specialties,
       specialty: formData.specialties[0] || "",
       location: formData.city,
-      grade: "B",
+      rate: Number(formData.rate) || 0,
+      grade: "Unverified",
       rating: 0,
       projects: 0,
       available: true,
+      verified: false,
       workHistory: [],
-      createdAt: new Date().toISOString()
-    })
+      reviews: [],
+      createdAt: new Date().toISOString(),
+    });
 
-    return { success: true, uid: user.uid }
+    return { success: true, uid: user.uid };
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error.message };
   }
-}
+};
 
 // Login existing contractor
 export const loginContractor = async (email, password) => {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password)
-    return { success: true, uid: userCredential.user.uid }
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password,
+    );
+    return { success: true, uid: userCredential.user.uid };
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error.message };
   }
-}
+};
 
 // Logout
 export const logoutContractor = async () => {
   try {
-    await signOut(auth)
-    return { success: true }
+    await signOut(auth);
+    return { success: true };
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error.message };
   }
-}
+};
 // Register a customer
 export const registerCustomer = async (name, email, password) => {
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-    const user = userCredential.user
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password,
+    );
+    const user = userCredential.user;
 
     await setDoc(doc(db, "customers", user.uid), {
       uid: user.uid,
       name,
       email,
-      createdAt: new Date().toISOString()
-    })
+      createdAt: new Date().toISOString(),
+    });
 
-    return { success: true, uid: user.uid, name }
+    return { success: true, uid: user.uid, name };
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error.message };
   }
-}
+};
 
 // Login a customer
 export const loginCustomer = async (email, password) => {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password)
-    const user = userCredential.user
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password,
+    );
+    const user = userCredential.user;
 
-    const docSnap = await getDoc(doc(db, "customers", user.uid))
-    const name = docSnap.exists() ? docSnap.data().name : "Customer"
+    const docSnap = await getDoc(doc(db, "customers", user.uid));
+    const name = docSnap.exists() ? docSnap.data().name : "Customer";
 
-    return { success: true, uid: user.uid, name }
+    return { success: true, uid: user.uid, name };
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error.message };
   }
-}
+};
 
 // Listen to auth state — tells us if user is logged in or not
 export const listenToAuthState = (callback) => {
-  return onAuthStateChanged(auth, callback)
-}
+  return onAuthStateChanged(auth, callback);
+};

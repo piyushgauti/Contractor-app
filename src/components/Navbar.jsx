@@ -4,10 +4,13 @@ function Navbar({
   currentUser,
   userType,
   unreadCount,
+  onHome,
   onLoginClick,
   onContractorLogin,
   onDashboard,
   onInboxClick,
+  onProjectsClick,
+  onAdminClick,
   onLogout,
 }) {
   const handleLogout = async () => {
@@ -17,16 +20,27 @@ function Navbar({
 
   return (
     <nav className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-      <div className="text-xl font-bold text-blue-600">ContractorFind</div>
+      <div
+        onClick={onHome}
+        className="text-xl font-bold text-blue-600 cursor-pointer hover:text-blue-700 transition-colors"
+      >
+        ContractorFind
+      </div>
 
       <div className="flex items-center gap-2">
         {currentUser ? (
           <>
-            {/* User name */}
-            <span className="text-xs text-gray-500 hidden sm:block max-w-[120px] truncate">
-              {userType === "contractor" ? "👷" : "👤"}{" "}
-              {currentUser.name || currentUser.email}
+            <span className="text-xs text-gray-500 hidden sm:block max-w-[100px] truncate">
+              {userType === "contractor" ? "👷" : "👤"} {currentUser.name}
             </span>
+
+            {/* Projects button */}
+            <button
+              onClick={onProjectsClick}
+              className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors hidden sm:block"
+            >
+              {userType === "contractor" ? "Projects" : "My projects"}
+            </button>
 
             {/* Chat icon with unread badge */}
             <div className="relative">
@@ -55,7 +69,6 @@ function Navbar({
               )}
             </div>
 
-            {/* Dashboard only for contractors */}
             {userType === "contractor" && (
               <button
                 onClick={onDashboard}
@@ -65,6 +78,14 @@ function Navbar({
               </button>
             )}
 
+            {currentUser?.email === "admin@contractorfind.com" && (
+              <button
+                onClick={onAdminClick}
+                className="text-xs text-purple-600 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-50 transition-colors"
+              >
+                Admin
+              </button>
+            )}
             <button
               onClick={handleLogout}
               className="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
@@ -78,7 +99,7 @@ function Navbar({
               onClick={onLoginClick}
               className="text-xs text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
             >
-              Sign in
+              User login
             </button>
             <button
               onClick={onContractorLogin}
